@@ -6,9 +6,11 @@ import Image from 'next/image'
 
 const HeroSection = () => {
 
-    const imageRef = useRef(null)
+    const imageRef = useRef<HTMLDivElement | null>(null)
     useEffect(()=>{
         const imageElement = imageRef?.current
+
+        if(!imageElement) return
 
         const handleScroll = ()=>{
             const theresold = 100
