@@ -1,46 +1,53 @@
 "use server";
 
-import { AccountType } from '@/generated/prisma';
+import { Account, AccountType } from '@/generated/prisma';
 import { Decimal } from '@/generated/prisma/runtime/library';
 import prisma from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
 
 
-interface Props_db{
+interface Props_server{
     name:string,
-    type:AccountType
-    userId:string,
-    balance:Decimal,
+    type:AccountType,
+    balance:string,
     isDefault:boolean
 }
-
-interface Props_serialized{
-    name:string,
-    type:AccountType
-    userId:string,
-    balance:number,
-    isDefault:boolean
+interface SerializedAccount {
+  id: string
+  name: string
+  type: AccountType
+  balance: number
+  isDefault: boolean
 }
 
+// const serializeTransaction = (obj)=>{
+//     // TODO
+// }
 
-const serialiszeTransaction = (obj:Props_db):Props_serialized =>{
-    // const serialized = {...obj}
-    // if(obj.balance){
-    //     //convert balance to number
-    //     serialized.balance = obj.balance.toNumber();
-    // }
-
-      return {
+const serializeAccount = (obj:Account) =>{
+    const serialized:SerializedAccount = {
+        id: obj.id,
         name: obj.name,
         type: obj.type,
-        userId: obj.userId,
-        isDefault: obj.isDefault,
         balance: obj.balance.toNumber(),
-  };
+        isDefault: obj.isDefault,
+    }
+//       return {
+//         name: obj.name,
+//         type: obj.type,
+//         userId: obj.userId,
+//         isDefault: obj.isDefault,
+//         balance: obj.balance.toNumber(),
+//   };
+
+    return serialized
 }
 
-export async function createAccount(data:Props_db){
+export async function createAccount(data:Props_server):Promise<{
+    success:boolean
+    data:SerializedAccount
+}>{
     try {
         //clerk check
         const { userId } = await auth()
@@ -62,7 +69,8 @@ export async function createAccount(data:Props_db){
         // so now the user is eligible to create an account 
 
         //Convert balance to float before saving
-        const balanceFloat = parseFloat(data.balance.toString())
+        //parseFloat() expects a string
+        const balanceFloat = parseFloat(data.balance)
         if(isNaN(balanceFloat)){
             throw new Error("Invalid balance ammount")
         }
@@ -99,7 +107,7 @@ export async function createAccount(data:Props_db){
                 type:data.type,
                 balance:new Decimal(balanceFloat),
                 userId:user.id,
-                isDefault:shouldBeDefault
+                isDefault:shouldBeDefault,
             }
         })
 
@@ -107,7 +115,7 @@ export async function createAccount(data:Props_db){
         //nextjs doesnt support decimal values
         //so before sending , kindly serialize 
 
-        const serializedAccount = serialiszeTransaction(account);
+        const serializedAccount = serializeAccount(account);
 
         revalidatePath('/dashboard')
         return{
@@ -120,4 +128,44 @@ export async function createAccount(data:Props_db){
         }
         throw new Error('Something went wrong while creating account')
     }
+
 }
+
+    export async function getUserAccounts(){
+        const { userId } = await auth()
+
+        if(!userId) throw new Error('Unauthorized')
+
+        //Db check
+        const user = await prisma.user.findUnique({
+            where:{
+                clerkUserId:userId
+            }
+        })
+
+        if(!user){
+            throw new Error('User not found')
+        }
+
+        const accounts = await prisma.account.findMany({
+            where:{
+                userId:user.id
+            },
+            orderBy:{
+                createdAt:'desc'
+            },
+            include:{
+                _count:{
+                    select:{
+                        transactions:true
+                    }
+                }
+            }
+        })
+
+        const serializedAccount = accounts.map(serializeAccount)//array of serialized accounts 
+
+        return serializedAccount
+
+        
+    }
