@@ -1,10 +1,10 @@
-import { se } from "date-fns/locale"
+"use client"
 import { useState } from "react"
 import { toast } from "sonner"
 import { z } from "zod"
-import { accountSchema } from "../src/app/lib/schema"
 
-type AccountFormData = z.infer<typeof accountSchema>
+
+
 const useFetch = (cb:(...args:any[])=>Promise<any>)=>{
     const [data, setData] = useState<unknown>(null)
     const [loading, setLoading] = useState(false)

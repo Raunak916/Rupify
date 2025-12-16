@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react'
 import AccountCard from './_components/account-card'
 
 const DashboardPage = async() => {
-  const accounts = await getUserAccounts()
+  const accounts = await getUserAccounts()//has  all the serialized accounts 
   return (
     <div className='px-5'>
       {/* Budget Progress */}

@@ -6,3 +6,5 @@ export const accountSchema = z.object({
     balance:z.string().min(1,"Initial balance is required"),
     isDefault:z.boolean().default(false)
 })
+
+//it will be used in form and remember form always returns string except this is default nd type
