@@ -1,11 +1,4 @@
-import {
-  BarChart3,
-  Receipt,
-  PieChart,
-  CreditCard,
-  Globe,
-  Zap,
-} from "lucide-react";
+import { BarChart3, CreditCard, Globe, PieChart, Receipt, Zap } from "lucide-react";
 
 // Stats Data
 export const statsData = [
