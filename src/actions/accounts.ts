@@ -162,3 +162,81 @@ export async function getAccountWithTransactions(accountId:string){
         }
 }
 
+
+export async function bulkDeleteTransactions(transactionIds:string[]){
+    try {
+        
+        const { userId } = await auth()
+
+        if(!userId) throw new Error('Unauthorized')
+
+        const user = await prisma.user.findUnique({
+            where:{
+                clerkUserId:userId
+            }
+        })
+
+        if(!user){
+            throw new Error('User not found')
+        }
+
+        const selectedTransactionsForDeletion = await prisma.transaction.findMany({
+            where:{
+                id:{
+                    in:transactionIds
+                },
+                userId:user.id
+            }
+        })
+
+        
+        const accountBalanceChanges = selectedTransactionsForDeletion.reduce((acc:Record<string,number>,transaction:Transaction)=>{
+            const change = 
+            transaction.type === 'EXPENSE'
+            ? transaction.amount.toNumber()//agar expense hai to usse hatane se humare paas paise badhenge 
+            : -transaction.amount.toNumber()//isse hatane se paise ghatenge 
+
+            acc[transaction.accountId] = (acc[transaction.accountId] || 0) + change
+
+            return acc
+        },{})
+
+        //Delete the transactions and update the account balance of the account 
+        await prisma.$transaction(async(tx)=>{
+            await tx.transaction.deleteMany({
+                where:{
+                    id:{
+                        in:transactionIds
+                    }
+                }
+            })
+
+            for(const[accountId, balanceChange] of Object.entries(accountBalanceChanges)){
+                await tx.account.update({
+                    where:{
+                        id:accountId
+                    },
+                    data:{
+                        balance:{
+                            increment:balanceChange
+                        }
+                    }
+                })
+            }
+        })
+
+        revalidatePath('/dashboard')
+        revalidatePath('/account/[id]')
+
+        return {
+            success:true
+        }
+
+    } catch (error) {
+        
+        if(error instanceof Error){
+            throw new Error(error.message)
+        }
+        throw new Error('Something went wrong while deleting transactions')
+    }
+}

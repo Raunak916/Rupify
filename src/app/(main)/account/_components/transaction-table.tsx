@@ -27,6 +27,9 @@ import {
   Clock,
   MoreHorizontal,
   RefreshCw,
+  SearchIcon,
+  Trash,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,8 +39,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import useFetch from "@/hooks/use-fetch";
+import { bulkDeleteTransactions } from "@/actions/accounts";
+import { toast } from "sonner";
+import { BarLoader } from "react-spinners";
 
 interface SerializedTransaction {
   id: string;
@@ -65,16 +79,83 @@ const TransactionTable = ({
 }: {
   transactions: SerializedTransaction[];
 }) => {
-  const filteredAndSortedTransactions = transactions;
-
   const router = useRouter();
-
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState({
     field: "date",
     direction: "desc",
   });
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [recurringfFilter, setRecurringFilter] = useState("");
+
+  const {
+    data: deleted,
+    loading: deleteLoading,
+    error,
+    fn: deleteFn,
+  } = useFetch(bulkDeleteTransactions);
+
+  const filteredAndSortedTransactions = useMemo(() => {
+    //During render, compute this value
+    // only if dependencies changed
+    //if nothing changed return the preious cached value
+    let result = [...transactions];//creating a copy so that original doesnt change
+
+    //apply search filter
+    //filter takes a call-back which returns a boolean
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      result = result.filter((tx) =>
+        tx.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    //apply recurring filter
+    if (recurringfFilter) {
+      result = result.filter((tx) => {
+        if (recurringfFilter === "recurring") return tx.isRecurring;
+        return tx.isRecurring === false;
+      });
+    }
+
+    //apply type filter
+    if (typeFilter) {
+      result = result.filter((tx) => {
+        if (typeFilter === "Income") {
+          return tx.type === "INCOME";
+        }
+        return tx.type === "EXPENSE";
+      });
+    }
+
+    //Apply sorting
+    result.sort((a, b) => {
+      let comparision = 0;
+      switch (sortConfig.field) {
+        case "date":
+          comparision = +new Date(a.date) - +new Date(b.date);
+          //+new Date() converts to number as Date - Date is not possible
+          break;
+
+        case "amount":
+          comparision = a.amount - b.amount;
+          break;
+
+        case "category":
+          comparision = a.category.localeCompare(b.category);
+          break;
+
+        default:
+          comparision = 0;
+      }
+
+      return sortConfig.direction === "asc" ? comparision : -comparision;
+    });
+
+    return result;
+  }, [transactions, searchTerm, typeFilter, recurringfFilter, sortConfig]);
 
   const handleSort = (field: string) => {
     setSortConfig((current) => ({
@@ -103,9 +184,96 @@ const TransactionTable = ({
           : filteredAndSortedTransactions.map((t) => t.id) //yaa toh sara lelo
     );
   };
+
+  const handleBulkDelete = async () => {
+    if (window.confirm("Are you sure you want to delete these transactions?")){
+
+      await deleteFn( selectedIds );
+      setSelectedIds([]);
+    }
+
+    else return;
+  };
+
+  useEffect(()=>{
+    if(deleted && !deleteLoading){
+      toast.error("Transactions deleted successfully")
+    }
+  },[deleteLoading, deleted])
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setTypeFilter("");
+    setRecurringFilter("");
+    setSelectedIds([]);
+  };
+
   return (
     <div className="space-y-4">
+      {!!deleteLoading && <BarLoader className="mt-4" width={'100%'} color='#9333ea' /> }
       {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search transactions.."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <Select
+            value={typeFilter}
+            onValueChange={(Value) => setTypeFilter(Value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Expense">Expense</SelectItem>
+              <SelectItem value="Income">Income</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={recurringfFilter}
+            onValueChange={(Value) => setRecurringFilter(Value)}
+          >
+            <SelectTrigger className="w-[155px]">
+              <SelectValue placeholder="All Transactions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recurring">Recurring Only </SelectItem>
+              <SelectItem value="non-recurring">Non Recurring Only</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Bulk Actions for deleting */}
+          {selectedIds.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button variant={"destructive"} onClick={handleBulkDelete}>
+                <Trash />
+                <span className="font-bold">
+                  Delete Selected ({selectedIds.length})
+                </span>
+              </Button>
+            </div>
+          )}
+
+          {/* to display X after any filter is applied */}
+          {(searchTerm || typeFilter || recurringfFilter) && (
+            <Button
+              variant={"outline"}
+              size={"icon"}
+              onClick={handleClearFilters}
+            >
+              <X className="h-4 w-5" />
+            </Button>
+          )}
+        </div>
+      </div>
 
       {/* Transactions */}
       <div className="rounded-md border">
@@ -193,10 +361,16 @@ const TransactionTable = ({
                       checked={selectedIds.includes(transaction.id)}
                     />
                   </TableCell>
+
+                  {/* Date */}
                   <TableCell>
                     {format(new Date(transaction.date), "PP")}
                   </TableCell>
+
+                  {/* Description */}
                   <TableCell>{transaction.description}</TableCell>
+
+                  {/* Category */}
                   <TableCell className="capitalize">
                     <span
                       style={{
@@ -207,6 +381,8 @@ const TransactionTable = ({
                       {transaction.category}
                     </span>
                   </TableCell>
+
+                  {/* Amount */}
                   <TableCell
                     className="text-right md:text-center font-medium"
                     style={{
@@ -216,6 +392,8 @@ const TransactionTable = ({
                     {transaction.type === "EXPENSE" ? "-" : "+"}₹
                     {transaction.amount.toFixed(2)}
                   </TableCell>
+
+                  {/* Recurring */}
                   <TableCell>
                     {transaction.isRecurring ? (
                       <Tooltip>
@@ -254,6 +432,7 @@ const TransactionTable = ({
                     )}
                   </TableCell>
 
+                  {/* Actions */}
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -274,7 +453,7 @@ const TransactionTable = ({
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive font-bold"
-                          // TODO onclick = add delete fucntionality
+                          onClick={handleBulkDelete}
                         >
                           Delete
                         </DropdownMenuItem>
