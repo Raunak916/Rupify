@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/tooltip";
 import {
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Clock,
   MoreHorizontal,
@@ -85,11 +87,13 @@ const TransactionTable = ({
     field: "date",
     direction: "desc",
   });
-
+  const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [recurringfFilter, setRecurringFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
+  const ITEMS_PER_PAGE = 10;
   const {
     data: deleted,
     loading: deleteLoading,
@@ -101,7 +105,7 @@ const TransactionTable = ({
     //During render, compute this value
     // only if dependencies changed
     //if nothing changed return the preious cached value
-    let result = [...transactions];//creating a copy so that original doesnt change
+    let result = [...transactions]; //creating a copy so that original doesnt change
 
     //apply search filter
     //filter takes a call-back which returns a boolean
@@ -157,6 +161,18 @@ const TransactionTable = ({
     return result;
   }, [transactions, searchTerm, typeFilter, recurringfFilter, sortConfig]);
 
+  const totalPages = Math.ceil(
+    filteredAndSortedTransactions.length / ITEMS_PER_PAGE
+  ); // agar 19 hai toh 2 pages not 1 ( isiliye ceil )
+
+  const paginatedTransaction = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredAndSortedTransactions.slice(
+      startIndex,
+      startIndex + ITEMS_PER_PAGE
+    );
+  }, [currentPage, filteredAndSortedTransactions]);
+
   const handleSort = (field: string) => {
     setSortConfig((current) => ({
       field,
@@ -164,7 +180,7 @@ const TransactionTable = ({
         current.field === field && current.direction === "asc" ? "desc" : "asc",
     }));
   };
-  //pehla click mai ascending rahega , firse click karoge toh descending ho jayega
+  //pehla click mai ascending rahega, firse click karoge toh descending ho jayega
 
   const handleSelect = (id: string) => {
     setSelectedIds((current) =>
@@ -179,27 +195,24 @@ const TransactionTable = ({
   const handleSelectAll = () => {
     setSelectedIds(
       (current) =>
-        current.length === filteredAndSortedTransactions.length //matlab pehle se sara selected hai toh sara haata do
+        current.length === paginatedTransaction.length //matlab pehle se sara selected hai toh sara haata do
           ? []
-          : filteredAndSortedTransactions.map((t) => t.id) //yaa toh sara lelo
+          : paginatedTransaction.map((t) => t.id) //yaa toh sara lelo
     );
   };
 
   const handleBulkDelete = async () => {
-    if (window.confirm("Are you sure you want to delete these transactions?")){
-
-      await deleteFn( selectedIds );
+    if (window.confirm("Are you sure you want to delete these transactions?")) {
+      await deleteFn(selectedIds);
       setSelectedIds([]);
-    }
-
-    else return;
+    } else return;
   };
 
-  useEffect(()=>{
-    if(deleted && !deleteLoading){
-      toast.error("Transactions deleted successfully")
+  useEffect(() => {
+    if (deleted && !deleteLoading) {
+      toast.error("Transactions deleted successfully");
     }
-  },[deleteLoading, deleted])
+  }, [deleteLoading, deleted]);
 
   const handleClearFilters = () => {
     setSearchTerm("");
@@ -208,9 +221,16 @@ const TransactionTable = ({
     setSelectedIds([]);
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedIds([]); // Clear selections on page change
+  };
+
   return (
     <div className="space-y-4">
-      {!!deleteLoading && <BarLoader className="mt-4" width={'100%'} color='#9333ea' /> }
+      {!!deleteLoading && (
+        <BarLoader className="mt-4" width={"100%"} color="#9333ea" />
+      )}
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -285,8 +305,8 @@ const TransactionTable = ({
                   onCheckedChange={handleSelectAll}
                   checked={
                     selectedIds.length ===
-                      filteredAndSortedTransactions.length &&
-                    filteredAndSortedTransactions.length > 0
+                      paginatedTransaction.length &&
+                    paginatedTransaction.length > 0
                   }
                 />
               </TableHead>
@@ -343,7 +363,7 @@ const TransactionTable = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAndSortedTransactions.length === 0 ? (
+            {paginatedTransaction.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={7}
@@ -353,7 +373,7 @@ const TransactionTable = ({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredAndSortedTransactions.map((transaction) => (
+              paginatedTransaction.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell>
                     <Checkbox
@@ -466,6 +486,30 @@ const TransactionTable = ({
           </TableBody>
         </Table>
       </div>
+
+      {totalPages > 0 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
