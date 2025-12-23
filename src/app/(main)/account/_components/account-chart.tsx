@@ -32,7 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Value } from "@radix-ui/react-select";
 
 interface SerializedTransaction {
   id: string;
@@ -130,13 +129,12 @@ const AccountChart = ({
             <SelectValue placeholder="Select Range" />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(DATE_RANGES).map(([key, { label }]) => {
-              return (
+            {Object.entries(DATE_RANGES).map(([key, { label }]) => (
                 <SelectItem key={key} value={key}>
                   {label}
                 </SelectItem>
-              );
-            })}
+              )
+            )}
           </SelectContent>
         </Select>
       </CardHeader>

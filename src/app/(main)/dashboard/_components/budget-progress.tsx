@@ -11,7 +11,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, Pencil, X } from "lucide-react";
-import { tuple } from "zod";
 import useFetch from "@/hooks/use-fetch";
 import { updateBudget } from "@/actions/budget";
 import { toast } from "sonner";
@@ -128,12 +127,23 @@ const BudgetProgress = ({
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           {initialBudget && (
-            <div className="space-y-2">
-              <Progress value={percentUsed} />
+            <div>
+              <Progress value={percentUsed} 
+              extraStyles = {`${
+                percentUsed >= 90
+                ? "bg-red-500"
+                : percentUsed >= 70
+                ? "bg-yellow-500"
+                : "bg-green-500"
+              }`}
+              />
             </div>
           )}
+          <p className="text-xs text-muted-foreground text-right">
+            {percentUsed.toFixed(2)}% used
+          </p>
         </CardContent>
       </Card>
     </div>
