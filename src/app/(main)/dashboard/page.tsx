@@ -3,13 +3,25 @@ import CreateAccountDrawer from '@/components/create-account-drawer'
 import { Card, CardContent } from '@/components/ui/card'
 import { Plus } from 'lucide-react'
 import AccountCard from './_components/account-card'
+import { getCurrentBudget } from '@/actions/budget'
+import BudgetProgress from './_components/budget-progress'
 
 const DashboardPage = async() => {
   const accounts = await getUserAccounts()//has  all the serialized accounts 
-  return (
-    <div className='px-5'>
-      {/* Budget Progress */}
 
+  const defaultAccount = accounts?.find((account) => account.isDefault === true);
+  let budgetData = null;
+
+  if(defaultAccount){
+    budgetData = await getCurrentBudget(defaultAccount.id)
+  }
+  return (
+    <div className='px-5 space-y-2'>
+      {/* Budget Progress */}
+      {defaultAccount && (<BudgetProgress 
+      initialBudget = {budgetData?.budget ?? null}
+      currentExpenses = {budgetData?.currentExpenses || 0}
+      />)}
       {/* Overview */}
 
       {/* Accounts Grid */}

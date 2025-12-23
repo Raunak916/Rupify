@@ -87,7 +87,6 @@ const TransactionTable = ({
     field: "date",
     direction: "desc",
   });
-  const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [recurringfFilter, setRecurringFilter] = useState("");
@@ -97,7 +96,6 @@ const TransactionTable = ({
   const {
     data: deleted,
     loading: deleteLoading,
-    error,
     fn: deleteFn,
   } = useFetch(bulkDeleteTransactions);
 
