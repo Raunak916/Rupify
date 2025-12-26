@@ -4,7 +4,6 @@ import {
   TransactionStatus,
   TransactionType,
 } from "@/generated/prisma";
-import { log } from "console";
 import { endOfDay, format, startOfDay, subDays } from "date-fns";
 import React, { useMemo, useState } from "react";
 import {

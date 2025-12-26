@@ -7,7 +7,7 @@ import { getCurrentBudget } from '@/actions/budget'
 import BudgetProgress from './_components/budget-progress'
 
 const DashboardPage = async() => {
-  const accounts = await getUserAccounts()//has  all the serialized accounts 
+  const accounts = await getUserAccounts()//has all the serialized accounts 
 
   const defaultAccount = accounts?.find((account) => account.isDefault === true);
   let budgetData = null;

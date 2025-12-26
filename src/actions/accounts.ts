@@ -18,13 +18,14 @@ interface SerializedTransaction{
   type: TransactionType
   amount: number
   category: string
-  date: string // ISO string (important!)
+  date: string // to string (important!)
   receiptUrl?: string | null
   description?: string | null
   status: TransactionStatus
   isRecurring: boolean
   recurringInterval?: RecurringInterval 
   nextRecurringDate?: string | null
+  accountId:string
 }
 
 const serializeAccount = (obj:Account) =>{
@@ -46,7 +47,7 @@ const serializeTransactions = (obj:Transaction)=>{
         type: obj.type,
         amount: obj.amount.toNumber(),
         category: obj.category,
-        date: obj.date.toISOString(),
+        date: obj.date.toString(),
         receiptUrl: obj.receiptUrl,
         description: obj.description,
         status: obj.status,
@@ -56,7 +57,8 @@ const serializeTransactions = (obj:Transaction)=>{
                           : undefined,
         nextRecurringDate:obj.nextRecurringDate 
                           ? obj.nextRecurringDate?.toISOString()
-                          : undefined
+                          : undefined,
+        accountId:obj.accountId
 
     }
     return serializedTransaction
