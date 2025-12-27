@@ -10,6 +10,8 @@ import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
+//ISO string UTC mai convert kar deta hai date ko 
+//is liye we use toString()
 interface SerializedTransaction {
   id: string;
   type: TransactionType;
@@ -40,7 +42,7 @@ const serializeTransactions = (obj: Transaction) => {
       ? obj.recurringInterval
       : undefined,
     nextRecurringDate: obj.nextRecurringDate
-      ? obj.nextRecurringDate?.toISOString()
+      ? obj.nextRecurringDate?.toString()
       : undefined,
     accountId: obj.accountId,
   };
@@ -161,5 +163,5 @@ function calculateNextRecurringDate(
       break;
   }
 
-  return date.toISOString();
+  return date.toString();
 }

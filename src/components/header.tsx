@@ -1,66 +1,60 @@
-import React from 'react'
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs'
-import Link from 'next/link'
-import Image from 'next/image'
-import { Button } from './ui/button'
-import { LayoutDashboard, PenBox } from 'lucide-react'
-import { checkUser } from '@/lib/checkUser'
+import React from "react"
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
+import Link from "next/link"
+import Image from "next/image"
+import { Button } from "./ui/button"
+import { LayoutDashboard, PenBox } from "lucide-react"
+import { checkUser } from "@/lib/checkUser"
+import { UserControl } from "./user-control"
 
-const Header = async() => {
+const Header = async () => {
   await checkUser()
 
-  
   return (
-    <div className='fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b'>
+    <header className="fixed top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
+      <nav className="container mx-auto flex items-center justify-between px-4 py-4">
 
-      <nav className='container mx-auto px-4 py-4 flex items-center justify-between'>
-        <Link href='/'>
-          <Image 
-            src = {'/cover.png'}
-            height={100}
+        {/* Logo */}
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/cover.png"
+            alt="Rupify Logo"
             width={100}
-            alt='Rupify Logo'
-            className='w-32 h-12 object-contain'
+            height={100}
+            className="h-12 w-32 object-contain"
           />
-         </Link>
+        </Link>
 
-       <div className='flex items-center space-x-4'>
-        <SignedIn>
-          <Link href='/dashboard' className='text-gray-600 hover:text-blue-600 flex items-center gap-2'>
-             <Button variant={'outline'}>
-                     <LayoutDashboard size={18} />
-                      <span className='hidden md:inline'>Dashboard</span>   
-             </Button>
-          </Link>
+        {/* Right actions */}
+        <div className="flex items-center gap-4">
+          <SignedIn>
+            <Link href="/dashboard">
+              <Button variant="outline" className="gap-2">
+                <LayoutDashboard size={18} />
+                <span className="hidden md:inline">Dashboard</span>
+              </Button>
+            </Link>
 
-          <Link href='/transaction/create' className='text-gray-600 hover:text-blue-600 flex items-center gap-2'>
-             <Button>
-                     <PenBox size={18} />
-                      <span className='hidden md:inline'>Add Transaction</span>   
-             </Button>
-          </Link>
+            <Link href="/transaction/create">
+              <Button className="gap-2">
+                <PenBox size={18} />
+                <span className="hidden md:inline">Add Transaction</span>
+              </Button>
+            </Link>
+          </SignedIn>
 
-        </SignedIn>
-        {/* agar user signed out hai  */}
-        <SignedOut>
-              <SignInButton forceRedirectUrl='/dashboard'>
-                 <Button variant={'outline'}>
-                  Login
-                 </Button>
-              </SignInButton>
-        </SignedOut>
-        
-        {/* agar user signed in hai */}
-        <SignedIn>
-              <UserButton appearance={{
-                elements:{
-                  avatarBox:"w-10 h-10"
-                }
-              }}/>
-        </SignedIn>
-       </div>
+          <SignedOut>
+            <SignInButton forceRedirectUrl="/dashboard">
+              <Button variant="outline">Login</Button>
+            </SignInButton>
+          </SignedOut>
+
+          <SignedIn>
+            <UserControl showName />
+          </SignedIn>
+        </div>
       </nav>
-    </div>
+    </header>
   )
 }
 

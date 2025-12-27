@@ -20,6 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { PopoverTrigger } from "@radix-ui/react-popover";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -73,6 +74,7 @@ const AddTransactionForm = ({
     },
   });
 
+  const router = useRouter();
   type TransactionFormData = z.infer<typeof transactionSchema>;
 
   const expense_Categories = categories.filter(
@@ -206,9 +208,7 @@ const AddTransactionForm = ({
             render={({ field }) => (
               <Select
                 value={field.value}
-                onValueChange={(value) => {
-                  field.onChange(value);
-                }}
+                onValueChange={field.onChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Category" />
@@ -313,9 +313,7 @@ const AddTransactionForm = ({
                   render={({ field }) => (
                     <Select
                       value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                      }}
+                      onValueChange={field.onChange}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Set Recurring Interval" />
@@ -344,7 +342,11 @@ const AddTransactionForm = ({
         {/* Row 7  */}
         <div>
           <div className="grid md:grid-cols-2 gap-2">
-            <Button className="w-full" variant={"outline"}>
+            <Button
+            type="button"
+            className="w-full" 
+            variant={"outline"}
+            onClick={()=>router.back()}>
               Cancel
             </Button>
             <Button
