@@ -113,26 +113,32 @@ const AddTransactionForm = ({
         onSubmit={handleSubmit(onsubmit)}
         className="space-y-6 max-w-3xl mx-auto border rounded-md p-5 shadow hover:shadow-2xl"
       >
-        <div className="space-y-2 flex flex-col">
-          <label className="text-sm font-medium" htmlFor="type">
-            Type
-          </label>
-          <Controller
-            name="type"
-            control={control}
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="INCOME">Income</SelectItem>
-                  <SelectItem value="EXPENSE">Expense</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
-
+        <div className="space-y-2 flex justify-between">
+          <div className="">
+            <label className="text-sm font-medium" htmlFor="type">
+              Type
+            </label>
+            <Controller
+              name="type"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="INCOME">Income</SelectItem>
+                    <SelectItem value="EXPENSE">Expense</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <div className="flex items-center ">
+            <Button type="button" onClick={() => reset()}>
+              Reset
+            </Button>
+          </div>
           {errors.type && (
             <p className="text-sm text-red-500">{errors.type.message}</p>
           )}
@@ -206,10 +212,7 @@ const AddTransactionForm = ({
             name="category"
             control={control}
             render={({ field }) => (
-              <Select
-                value={field.value}
-                onValueChange={field.onChange}
-              >
+              <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Category" />
                 </SelectTrigger>
@@ -311,10 +314,7 @@ const AddTransactionForm = ({
                   name="recurringInterval"
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Set Recurring Interval" />
                       </SelectTrigger>
@@ -334,19 +334,18 @@ const AddTransactionForm = ({
                 )}
               </div>
             </div>
-          )
-          
-          }
+          )}
         </div>
 
         {/* Row 7  */}
         <div>
           <div className="grid md:grid-cols-2 gap-2">
             <Button
-            type="button"
-            className="w-full" 
-            variant={"outline"}
-            onClick={()=>router.back()}>
+              type="button"
+              className="w-full"
+              variant={"outline"}
+              onClick={() => router.back()}
+            >
               Cancel
             </Button>
             <Button

@@ -6,11 +6,14 @@ import {
   TransactionStatus,
   TransactionType,
 } from "@/generated/prisma";
+import aj from "@/lib/arcjet";
 import prisma from "@/lib/prisma";
+import { request } from "@arcjet/next";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { codec } from "zod";
 
-//ISO string UTC mai convert kar deta hai date ko 
+//ISO string UTC mai convert kar deta hai date ko
 //is liye we use toString()
 interface SerializedTransaction {
   id: string;
@@ -70,7 +73,29 @@ export async function createTransaction(data: TransactionFormValues): Promise<{
     if (!userId) throw new Error("Unauthorized");
 
     //Arcjet to add rate limiting
-    //TODO
+    //get request data
+    const req = await request();
+    //check rate limt
+    //protect returns <ArcjetDecision> promise 
+    const decision = await aj.protect(req, {
+      userId,
+      requested: 1, // how many tokens to consume per request
+    });
+    if(decision.isDenied()){
+      if(decision.reason.isRateLimit()){
+        const {remaining , reset} = decision.reason
+        console.error({
+          code:"RATE_LIMIT",
+          details:{
+            remaining,
+            resetInSeconds:reset
+          }
+        })
+        throw new Error("Rate limit exceeded")
+      }
+      throw new Error("Request Blocked")
+    }
+
 
     //Db check
     const user = await prisma.user.findUnique({
@@ -104,7 +129,13 @@ export async function createTransaction(data: TransactionFormValues): Promise<{
       const newTransaction = await tx.transaction.create({
         data: {
           ...data,
-          date:new Date(Date.UTC(data.date.getFullYear(), data.date.getMonth(), data.date.getDate())),//becuase ek din pehle ho jaa raha thaa 
+          date: new Date(
+            Date.UTC(
+              data.date.getFullYear(),
+              data.date.getMonth(),
+              data.date.getDate()
+            )
+          ), //becuase ek din pehle ho jaa raha thaa
           userId: user.id,
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
