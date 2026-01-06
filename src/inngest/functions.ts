@@ -1,6 +1,5 @@
 import prisma from "@/lib/prisma";
 import { inngest } from "./client";
-import { log } from "console";
 import { sendEmail } from "@/actions/send-email";
 import { EmailTemplate } from "../../emails/template";
 
@@ -60,7 +59,7 @@ export const checkBudgetAlert = inngest.createFunction(
         const totalExpenses = expenses._sum.amount?.toNumber() || 0;
         const budgetAmount = Number(budget.amount);
         const percentageUsed = (totalExpenses / budgetAmount) * 100;
-        log("percentageUsed", percentageUsed);
+        
         //send email if more than 75% used
         if (
           percentageUsed >= 75 &&

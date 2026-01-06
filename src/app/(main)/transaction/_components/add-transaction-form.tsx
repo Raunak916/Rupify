@@ -25,6 +25,7 @@ import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import ReceiptScanner from "./receipt-scanner";
 
 interface SerializedAccount {
   id: string;
@@ -48,6 +49,13 @@ interface AddTransactionFormProps {
   categories: Category[];
 }
 
+export type ScanProps = {
+  amount: number;
+  date: Date;
+  description: string;
+  merchantName: string;
+  category: string;
+} | null;
 const AddTransactionForm = ({
   accounts,
   categories,
@@ -105,9 +113,24 @@ const AddTransactionForm = ({
   const onsubmit = async (data: TransactionFormData) => {
     await createTransactionFn(data);
   };
+
+  const handleScanComplete = (scannedData: ScanProps) => {
+    if (scannedData) {
+      setValue("amount", scannedData.amount.toString());
+      setValue("date", new Date(scannedData.date));
+      if (scannedData.description) {
+        setValue("description", scannedData.description);
+      }
+      if (scannedData.category) {
+        setValue("category", scannedData.category);
+      }
+    }
+  };
+
   return (
     <div className="w-full">
       {/* AI Recipt Scanner  TODO*/}
+      <ReceiptScanner onScanComplete={handleScanComplete} />
       {/* Row 1  */}
       <form
         onSubmit={handleSubmit(onsubmit)}

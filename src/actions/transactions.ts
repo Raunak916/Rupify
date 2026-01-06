@@ -11,7 +11,8 @@ import prisma from "@/lib/prisma";
 import { request } from "@arcjet/next";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { codec } from "zod";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ScanProps } from "@/app/(main)/transaction/_components/add-transaction-form";
 
 //ISO string UTC mai convert kar deta hai date ko
 //is liye we use toString()
@@ -52,7 +53,8 @@ const serializeTransactions = (obj: Transaction) => {
   return serializedTransaction;
 };
 
-type TransactionFormValues = {
+const genAi = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+export type TransactionFormValues = {
   type: "INCOME" | "EXPENSE";
   amount: string;
   description?: string;
@@ -76,26 +78,25 @@ export async function createTransaction(data: TransactionFormValues): Promise<{
     //get request data
     const req = await request();
     //check rate limt
-    //protect returns <ArcjetDecision> promise 
+    //protect returns <ArcjetDecision> promise
     const decision = await aj.protect(req, {
       userId,
       requested: 1, // how many tokens to consume per request
     });
-    if(decision.isDenied()){
-      if(decision.reason.isRateLimit()){
-        const {remaining , reset} = decision.reason
+    if (decision.isDenied()) {
+      if (decision.reason.isRateLimit()) {
+        const { remaining, reset } = decision.reason;
         console.error({
-          code:"RATE_LIMIT",
-          details:{
+          code: "RATE_LIMIT",
+          details: {
             remaining,
-            resetInSeconds:reset
-          }
-        })
-        throw new Error("Rate limit exceeded")
+            resetInSeconds: reset,
+          },
+        });
+        throw new Error("Rate limit exceeded");
       }
-      throw new Error("Request Blocked")
+      throw new Error("Request Blocked");
     }
-
 
     //Db check
     const user = await prisma.user.findUnique({
@@ -195,4 +196,86 @@ function calculateNextRecurringDate(
   }
 
   return date.toString();
+}
+
+function isValidReceipt(data: ScanProps) {
+  return (
+    data &&
+    typeof data === "object" &&
+    typeof data.amount === "number" &&
+    typeof data.date === "string" &&
+    typeof data.description === "string" &&
+    typeof data.merchantName === "string" &&
+    typeof data.category === "string"
+  );
+}
+
+export async function scanReceipt(file: File) {
+  try {
+    const model = genAi.getGenerativeModel({
+      model: "gemini-2.5-flash",
+    });
+
+    //convert to array buffer because they accept bytes as input not file directly
+    const arrayBuffer = await file.arrayBuffer();
+
+    //convert arraybuffer to base64
+    const base64String = Buffer.from(arrayBuffer).toString("base64");
+    const prompt = `
+      Analyze this receipt image and extract the following information in JSON format:
+      - Total amount (just the number)
+      - Date (in ISO format)
+      - Description or items purchased (brief summary)
+      - Merchant/store name
+      - Suggested category (one of: housing,transportation,groceries,utilities,entertainment,food,shopping,healthcare,education,personal,travel,insurance,gifts,bills,other-expense )
+      
+      Only respond with valid JSON in this exact format:
+      {
+        "amount": number,
+        "date": "ISO date string",
+        "description": "string",
+        "merchantName": "string",
+        "category": "string"
+      }
+
+      If its not a recipt, return an empty object
+    `;
+
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType: file.type,
+          data: base64String,
+        },
+      },
+      { 
+        text: prompt,
+      },
+    ]);
+
+    const response = await result.response;
+    const text = response.text();
+    const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
+
+    try {
+      const data = JSON.parse(cleanedText);
+      if (!isValidReceipt(data)) {
+        console.error("Invalid receipt data from Gemini:", data);
+        throw new Error("Invalid receipt data");
+      }
+      return {
+        amount: data.amount as number,
+        date: new Date(data.date as string),
+        description: data.description as string,
+        category: data.category as string,
+        merchantName: data.merchantName as string,
+      };
+    } catch (parseError) {
+      console.error("Error parsing receipt data:", parseError);
+      throw new Error("Invalid Response format from Gemini");
+    }
+  } catch (error) {
+    console.error("GEMINI API ERROR:", error);
+    throw new Error("Failed to scan receipt");
+  }
 }

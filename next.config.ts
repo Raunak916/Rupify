@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental:{
+    serverActions:{
+      bodySizeLimit:'5mb'// default is 4mb
+    }
+  },
   productionBrowserSourceMaps: false
 };
 
